@@ -1,0 +1,29 @@
+# Backend dependencies — pinned to latest stable versions verified against
+# PyPI on 2026-09-16. Re-check before long-term deployment.
+
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+websockets==17.1
+python-multipart==0.0.32
+
+opencv-python==5.0.0.93
+numpy==2.5.3
+
+# AI / perception. Ultralytics ships YOLO26 (ultralytics/cfg/models/26/*)
+# alongside YOLOv8/v11/v12 etc. The nano weights (yolo26n.pt) are downloaded
+# automatically on first run — see perception/detector.py.
+ultralytics==8.4.153
+
+# Torch is an ultralytics dependency but pinned explicitly so CPU/CUDA choice
+# is deliberate rather than whatever ultralytics happens to pull in.
+# Install the CPU build by default; swap for a CUDA build manually on
+# machines with an NVIDIA GPU (see docs/hardware-integration.md).
+# NOTE: torch/torchvision move fast and occasionally desync — if this exact
+# pair fails to resolve, install torch first and let pip pick a matching
+# torchvision: `pip install torch==2.14.0` then `pip install torchvision`.
+torch==2.14.0
+torchvision==0.29.0
+
+python-dotenv==1.2.3

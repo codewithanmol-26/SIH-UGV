@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #12140F;
+  --color-panel: #191C14;
+  --color-panel-line: #2C3023;
+  --color-amber: #E8A33D;
+  --color-amber-dim: #7A5A24;
+  --color-sage: #8FA97C;
+  --color-sage-dim: #3C4A33;
+  --color-rust: #C4453A;
+  --color-rust-dim: #4A2620;
+  --color-text: #E7E3D8;
+  --color-text-dim: #8B8A7D;
+
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Archivo', sans-serif;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+body {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(143,169,124,0.05), transparent 40%),
+    radial-gradient(circle at 85% 90%, rgba(232,163,61,0.04), transparent 40%),
+    var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+.pulse {
+  animation: pulse-dot 2.2s ease-in-out infinite;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-panel); }
+::-webkit-scrollbar-thumb { background: var(--color-panel-line); border-radius: 4px; }
+
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; }
+}

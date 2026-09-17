@@ -1,0 +1,37 @@
+# Local-development orchestration. Camera access (webcam passthrough) is
+# host/OS-specific — on Linux, uncomment the `devices:` line below and point
+# it at your webcam. On macOS/Windows, Docker cannot pass through a webcam
+# device at all; run the backend natively there instead (see
+# docs/development.md) and use docker-compose for the frontend only, or for
+# UGV_CAMERA_SOURCE=video_file demos which need no host camera.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - UGV_HOST=0.0.0.0
+      - UGV_PORT=8000
+      - UGV_CAMERA_SOURCE=video_file
+      - UGV_CAMERA_VIDEO_PATH=/app/sample_data/sample_outdoor.mp4
+      - UGV_YOLO_WEIGHTS_PATH=/app/models/yolo26n.pt
+    volumes:
+      - ./models:/app/models
+      - ./sample_data:/app/sample_data
+    # devices:
+    #   - "/dev/video0:/dev/video0"   # Linux webcam passthrough; set UGV_CAMERA_SOURCE=webcam too
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE: http://localhost:8000/api
+        VITE_WS_URL: ws://localhost:8000/ws/telemetry
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
