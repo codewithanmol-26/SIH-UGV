@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+frontend/dist/
+
+# Env files
+.env
+backend/.env
+frontend/.env
+
+# Model weights (large binaries, auto-downloaded)
+models/*.pt
+!models/.gitkeep
+
+# Database
+*.db
+ugv_sessions.db
+
+# Sample media (keep the repo light; document how to get sample_outdoor.mp4 instead)
+sample_data/*.mp4
+!sample_data/.gitkeep
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
