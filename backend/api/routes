@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, HTTPException, Request
 
 from api.schemas import (
@@ -121,12 +123,8 @@ async def perception_objects(request: Request):
 
 @router.post("/camera/source", response_model=ActionResponse)
 async def set_camera_source(body: CameraSourceRequest, request: Request):
-    # Switching the live source safely requires re-running initialize();
-    # exposed as a documented limitation rather than half-implemented here.
-    raise HTTPException(
-        status_code=501,
-        detail=(
-            "Hot-swapping camera source at runtime is not implemented in this MVP. "
-            "Set UGV_CAMERA_SOURCE in .env and restart the backend."
-        ),
-    )
+    if body.source not in ("webcam", "video_file", "ip_stream", "rtsp"):
+        raise HTTPException(status_code=422, detail="Unknown camera source")
+    nav = _nav(request)
+    ok, message = await asyncio.to_thread(nav.switch_camera, body.source, body.url.strip())
+    return ActionResponse(ok=ok, state=nav.fsm.state.value, message=message)

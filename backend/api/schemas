@@ -10,6 +10,7 @@ class DestinationRequest(BaseModel):
 
 class CameraSourceRequest(BaseModel):
     source: str = Field(..., description="'webcam' | 'video_file' | 'ip_stream' | 'rtsp'")
+    url: str = Field("", description="Stream URL for ip_stream / rtsp")
 
 
 class ActionResponse(BaseModel):

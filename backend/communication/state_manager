@@ -158,6 +158,39 @@ class NavigationSystem:
         self.fsm.transition(NavigationState.READY)
         self.log("System ready", "good")
 
+    def switch_camera(self, source: str, url: str = "") -> tuple[bool, str]:
+        """Swap the live camera at runtime (e.g. paste a phone's stream URL
+        from the dashboard). Stops motion first; returns (ok, message)."""
+        self.motor_controller.send(VelocityCommand(0.0, 0.0, MotionCommand.STOP))
+        self.destination = None
+        self.current_plan = None
+        if self.camera:
+            self.camera.release()
+        if source == "ip_stream":
+            settings.camera_ip_url = url
+        elif source == "rtsp":
+            settings.camera_rtsp_url = url
+        settings.camera_source = source
+        cam = create_camera_source(source, settings)
+        if not cam.open():
+            self.camera = cam
+            self.status.camera = ModuleStatus.NOT_IMPLEMENTED
+            self.log(f"Camera '{source}' failed to open ({url or 'no url'})", "flag")
+            return False, "Could not open that stream. Check URL and Wi-Fi."
+        self.camera = cam
+        self.status.camera = cam.status
+        if self.status.perception != ModuleStatus.ACTIVE:
+            try:
+                self.detector.load()
+                self.status.perception = ModuleStatus.ACTIVE
+            except Exception as exc:
+                self.log(f"YOLO model failed to load: {exc}", "flag")
+        self.simulator.reset()
+        self.localization_backend.reset()
+        self.fsm.state = NavigationState.READY
+        self.log(f"Camera switched to {source}", "good")
+        return True, f"Connected to {source}"
+
     # ---- operator commands -----------------------------------------------------
     def set_destination(self, x: float, y: float) -> bool:
         self.destination = (x, y)

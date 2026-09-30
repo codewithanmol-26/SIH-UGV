@@ -9,12 +9,13 @@ instantiates.
 Status:
     WebcamSource     -> ACTIVE   (real cv2.VideoCapture against a laptop webcam)
     VideoFileSource   -> ACTIVE   (real cv2.VideoCapture against a video file, looped)
-    IPStreamSource    -> NOT_IMPLEMENTED (interface only; MJPEG/HTTP stream from a phone)
+    IPStreamSource    -> ACTIVE   (phone MJPEG/HTTP stream, threaded latest-frame reader)
     RTSPSource        -> NOT_IMPLEMENTED (interface only; same VideoCapture backend, RTSP URL)
 """
 from __future__ import annotations
 
 import abc
+import threading
 import time
 from dataclasses import dataclass
 
@@ -131,33 +132,87 @@ class VideoFileSource(_OpenCVCaptureSource):
 
 
 class IPStreamSource(CameraSource):
-    """Mobile-phone HTTP/MJPEG stream (e.g. the 'IP Webcam' Android app).
+    """Phone camera over Wi-Fi (MJPEG/HTTP, e.g. the 'IP Webcam' Android app,
+    URL like http://<phone-ip>:8080/video). ACTIVE.
 
-    NOT_IMPLEMENTED: cv2.VideoCapture can usually open an MJPEG HTTP URL
-    directly (same code path as _OpenCVCaptureSource), but that needs
-    testing against a real phone stream to pick sane timeouts/retry logic
-    before it's honestly labelled ACTIVE. Wire it up by pointing
-    _OpenCVCaptureSource at settings.camera_ip_url once verified.
+    A background thread drains the stream and keeps only the newest frame, so
+    the navigation loop never processes stale, buffered frames (which would
+    otherwise show up as growing latency on the dashboard). Reconnects
+    automatically if the phone drops off Wi-Fi; while disconnected read()
+    returns None and is_stale() goes True, so the safety monitor reacts.
     """
 
-    status = ModuleStatus.NOT_IMPLEMENTED
+    status = ModuleStatus.ACTIVE
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, target_width: int | None = None) -> None:
         super().__init__()
         self._url = url
+        self._target_width = target_width
+        self._cap: cv2.VideoCapture | None = None
+        self._lock = threading.Lock()
+        self._latest: np.ndarray | None = None
+        self._latest_seq = 0
+        self._served_seq = 0
+        self._running = False
+        self._thread: threading.Thread | None = None
 
-    def open(self) -> bool:
+    def _connect(self) -> bool:
+        cap = cv2.VideoCapture(self._url)
+        if cap.isOpened():
+            self._cap = cap
+            return True
+        cap.release()
         return False
 
+    def open(self) -> bool:
+        if not self._url or not self._connect():
+            return False
+        self._running = True
+        self._thread = threading.Thread(target=self._reader, daemon=True)
+        self._thread.start()
+        return True
+
+    def _reader(self) -> None:
+        while self._running:
+            if self._cap is None or not self._cap.isOpened():
+                time.sleep(1.0)
+                self._connect()
+                continue
+            ok, image = self._cap.read()
+            if not ok or image is None:
+                self._cap.release()
+                self._cap = None
+                continue
+            if self._target_width and image.shape[1] != self._target_width:
+                scale = self._target_width / image.shape[1]
+                image = cv2.resize(image, (self._target_width, int(image.shape[0] * scale)))
+            with self._lock:
+                self._latest = image
+                self._latest_seq += 1
+
     def read(self) -> Frame | None:
-        return None
+        with self._lock:
+            if self._latest is None or self._latest_seq == self._served_seq:
+                return None
+            image = self._latest
+            self._served_seq = self._latest_seq
+        self._frame_index += 1
+        self._last_frame_time = time.monotonic()
+        h, w = image.shape[:2]
+        return Frame(image=image, timestamp=self._last_frame_time,
+                     frame_index=self._frame_index, width=w, height=h)
 
     def release(self) -> None:
-        return None
+        self._running = False
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+        if self._cap is not None:
+            self._cap.release()
+            self._cap = None
 
     @property
     def is_open(self) -> bool:
-        return False
+        return self._cap is not None and self._cap.isOpened()
 
 
 class RTSPSource(CameraSource):
@@ -193,7 +248,7 @@ def create_camera_source(kind: str, settings) -> CameraSource:
     if kind == "video_file":
         return VideoFileSource(settings.camera_video_path)
     if kind == "ip_stream":
-        return IPStreamSource(settings.camera_ip_url)
+        return IPStreamSource(settings.camera_ip_url, settings.camera_width)
     if kind == "rtsp":
         return RTSPSource(settings.camera_rtsp_url)
     raise ValueError(f"Unknown camera source kind: {kind}")

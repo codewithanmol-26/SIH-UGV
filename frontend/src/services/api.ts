@@ -27,5 +27,11 @@ export const api = {
   stop: () => request<ActionResponse>('/navigation/stop', { method: 'POST' }),
   emergencyStop: () => request<ActionResponse>('/navigation/emergency-stop', { method: 'POST' }),
 
+  setCamera: (source: string, url = '') =>
+    request<ActionResponse>('/camera/source', {
+      method: 'POST',
+      body: JSON.stringify({ source, url }),
+    }),
+
   navigationStatus: () => request<NavigationStatusResponse>('/navigation/status'),
 };

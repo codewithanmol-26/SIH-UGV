@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { api } from '../services/api';
 import { Panel } from './Primitives';
 import type { Telemetry } from '../types';
 
@@ -8,6 +10,23 @@ interface CameraPanelProps {
 }
 
 export function CameraPanel({ frameDataUri, telemetry, connectionOpen }: CameraPanelProps) {
+  const [url, setUrl] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const connect = async () => {
+    setBusy(true);
+    setMsg('');
+    try {
+      const r = await api.setCamera('ip_stream', url);
+      setMsg(r.message ?? (r.ok ? 'Connected' : 'Failed'));
+    } catch (e) {
+      setMsg('Could not open that stream. Check URL and Wi-Fi.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Panel title="FORWARD CAMERA · PERCEPTION OVERLAY">
       <div className="relative rounded-[2px] overflow-hidden border border-panel-line aspect-video bg-[#1D2116] flex items-center justify-center">
@@ -27,6 +46,23 @@ export function CameraPanel({ frameDataUri, telemetry, connectionOpen }: CameraP
         </span>
         <span>Obstacles: {telemetry.obstacle_count} active</span>
       </div>
+
+      <div className="mt-4 flex gap-2">
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Phone stream URL, e.g. http://10.26.167.136:8080/video"
+          className="flex-1 min-w-0 border border-panel-line bg-transparent rounded-[2px] px-2 py-1.5 font-mono text-[11px]"
+        />
+        <button
+          onClick={connect}
+          disabled={busy || !url.trim()}
+          className="border border-panel-line rounded-[2px] px-3 font-mono text-[11px] disabled:opacity-50"
+        >
+          {busy ? '…' : 'CONNECT'}
+        </button>
+      </div>
+      {msg && <div className="mt-1 font-mono text-[10px] text-text-dim">{msg}</div>}
 
       <div className="grid grid-cols-2 gap-3 mt-4">
         <Readout label="AI LATENCY" value={`${telemetry.ai_latency_ms.toFixed(0)} ms`} />
