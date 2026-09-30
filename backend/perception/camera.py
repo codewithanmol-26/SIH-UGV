@@ -94,7 +94,7 @@ class _OpenCVCaptureSource(CameraSource):
         if not ok or image is None:
             if self._loop:
                 # Recorded video reached EOF — rewind so a demo run can loop.
-                self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                self._cap.set(cv2.CAP_PROP_POS_FRAMES, 1)
                 ok, image = self._cap.read()
                 if not ok:
                     return None
@@ -183,6 +183,9 @@ class IPStreamSource(CameraSource):
                 self._cap.release()
                 self._cap = None
                 continue
+
+                image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+
             if self._target_width and image.shape[1] != self._target_width:
                 scale = self._target_width / image.shape[1]
                 image = cv2.resize(image, (self._target_width, int(image.shape[0] * scale)))
