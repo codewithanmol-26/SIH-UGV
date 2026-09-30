@@ -184,7 +184,7 @@ class IPStreamSource(CameraSource):
                 self._cap = None
                 continue
 
-                image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+                image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
             if self._target_width and image.shape[1] != self._target_width:
                 scale = self._target_width / image.shape[1]
