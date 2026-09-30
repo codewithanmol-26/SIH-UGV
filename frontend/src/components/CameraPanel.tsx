@@ -51,7 +51,7 @@ export function CameraPanel({ frameDataUri, telemetry, connectionOpen }: CameraP
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Phone stream URL, e.g. http://10.26.167.136:8080/video"
+          placeholder="Phone stream URL, e.g. http://172.19.149.137:8080/video"
           className="flex-1 min-w-0 border border-panel-line bg-transparent rounded-[2px] px-2 py-1.5 font-mono text-[11px]"
         />
         <button
