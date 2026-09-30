@@ -94,7 +94,7 @@ class _OpenCVCaptureSource(CameraSource):
         if not ok or image is None:
             if self._loop:
                 # Recorded video reached EOF — rewind so a demo run can loop.
-                self._cap.set(cv2.CAP_PROP_POS_FRAMES, 1)
+                self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 ok, image = self._cap.read()
                 if not ok:
                     return None
